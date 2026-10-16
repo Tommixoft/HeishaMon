@@ -12,6 +12,9 @@ on:
       - 'Examples/Rules/**'
       - 'HeishaMon/src/rules/**'
       - 'HeishaMon/src/common/**'
+      - 'Tools/parsenum_test/**'
+      - 'Tools/commands_test/**'
+      - 'HeishaMon/commands.cpp'
       - 'HeishaMon/decode.h'
       - 'HeishaMon/commands.h'
       - '.github/workflows/rules-tests.yml'
@@ -20,6 +23,9 @@ on:
       - 'Examples/Rules/**'
       - 'HeishaMon/src/rules/**'
       - 'HeishaMon/src/common/**'
+      - 'Tools/parsenum_test/**'
+      - 'Tools/commands_test/**'
+      - 'HeishaMon/commands.cpp'
       - 'HeishaMon/decode.h'
       - 'HeishaMon/commands.h'
       - '.github/workflows/rules-tests.yml'
@@ -37,4 +43,12 @@ jobs:
 
       - name: Build harness and run rules tests
         run: Examples/Rules/run_tests.sh
+        shell: bash
+
+      - name: Build and run command argument parser tests
+        run: Tools/parsenum_test/run.sh
+        shell: bash
+
+      - name: Build and run command setter tests
+        run: Tools/commands_test/run.sh
         shell: bash

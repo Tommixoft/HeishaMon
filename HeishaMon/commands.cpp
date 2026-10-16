@@ -1,4 +1,5 @@
 #include "commands.h"
+#include "src/common/parsenum.h"
 #include <LittleFS.h>
 
 //removed checksum from default query, is calculated in send_command
@@ -43,12 +44,25 @@ static unsigned int temp2hex(float temp) {
   return hextemp;
 }
 
+// name is a PSTR command name; it is copied to RAM because %s cannot read flash on ESP8266.
+static bool parse_command_arg(const char *msg, long min, long max, long *value, char *log_msg, PGM_P name) {
+  if (parse_int_arg(msg, min, max, value)) {
+    return true;
+  }
+  char name_ram[29] = { 0 };
+  strncpy_P(name_ram, name, sizeof(name_ram) - 1);
+  snprintf_P(log_msg, 256, PSTR("Invalid value '%.32s' for %s: expected integer %ld to %ld"), msg == NULL ? "NULL" : msg, name_ram, min, max);
+  return false;
+}
 
 unsigned int set_heatpump_state(char *msg, unsigned char *cmd, char *log_msg) {
-  byte heatpump_state = 1;
-  String set_heatpump_state_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetHeatpump"))) {
+    return 0;
+  }
 
-  if ( set_heatpump_state_string.toInt() == 1 ) {
+  byte heatpump_state = 1;
+  if ( value == 1 ) {
     heatpump_state = 2;
   }
 
@@ -67,11 +81,13 @@ unsigned int set_heatpump_state(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_pump(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_pump_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetPump"))) {
+    return 0;
+  }
 
   byte pump_state = 16;
-  if ( set_pump_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     pump_state = 32;
   }
 
@@ -90,10 +106,12 @@ unsigned int set_pump(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_max_pump_duty(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, 0, 254, &value, log_msg, PSTR("SetMaxPumpDuty"))) {
+    return 0;
+  }
 
-  String set_pumpduty_string(msg);
-
-  byte pumpduty = set_pumpduty_string.toInt() + 1;
+  byte pumpduty = value + 1;
 
   {
     char tmp[256] = { 0 };
@@ -110,10 +128,12 @@ unsigned int set_max_pump_duty(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_quiet_mode(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, 0, 30, &value, log_msg, PSTR("SetQuietMode"))) {
+    return 0;
+  }
 
-  String set_quiet_mode_string(msg);
-
-  byte quiet_mode = (set_quiet_mode_string.toInt() + 1) * 8;
+  byte quiet_mode = (value + 1) * 8;
 
   {
     char tmp[256] = { 0 };
@@ -130,10 +150,12 @@ unsigned int set_quiet_mode(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_z1_heat_request_temperature(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetZ1HeatRequestTemperature"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -150,10 +172,12 @@ unsigned int set_z1_heat_request_temperature(char *msg, unsigned char *cmd, char
 }
 
 unsigned int set_z1_cool_request_temperature(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetZ1CoolRequestTemperature"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -170,10 +194,12 @@ unsigned int set_z1_cool_request_temperature(char *msg, unsigned char *cmd, char
 }
 
 unsigned int set_z2_heat_request_temperature(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetZ2HeatRequestTemperature"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -190,10 +216,12 @@ unsigned int set_z2_heat_request_temperature(char *msg, unsigned char *cmd, char
 }
 
 unsigned int set_z2_cool_request_temperature(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetZ2CoolRequestTemperature"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -210,10 +238,12 @@ unsigned int set_z2_cool_request_temperature(char *msg, unsigned char *cmd, char
 }
 
 unsigned int set_bivalent_start_temp(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetBivalentStartTemp"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -229,10 +259,12 @@ unsigned int set_bivalent_start_temp(char *msg, unsigned char *cmd, char *log_ms
   return sizeof(panasonicSendQuery);
 }
 unsigned int set_bivalent_ap_start_temp(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetBivalentAPStartTemp"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -248,10 +280,12 @@ unsigned int set_bivalent_ap_start_temp(char *msg, unsigned char *cmd, char *log
   return sizeof(panasonicSendQuery);
 }
 unsigned int set_bivalent_ap_stop_temp(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetBivalentAPStopTemp"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -268,11 +302,13 @@ unsigned int set_bivalent_ap_stop_temp(char *msg, unsigned char *cmd, char *log_
 }
 
 unsigned int set_force_DHW(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_force_DHW_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetForceDHW"))) {
+    return 0;
+  }
 
   byte force_DHW_mode = 64; //hex 0x40
-  if ( set_force_DHW_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     force_DHW_mode = 128; //hex 0x80
   }
 
@@ -291,11 +327,13 @@ unsigned int set_force_DHW(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_force_defrost(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_force_defrost_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetForceDefrost"))) {
+    return 0;
+  }
 
   byte force_defrost_mode = 0;
-  if ( set_force_defrost_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     force_defrost_mode = 2; //hex 0x02
   }
 
@@ -354,11 +392,13 @@ unsigned int set_sterilization_max_time(char *msg, unsigned char *cmd, char *log
 }
 
 unsigned int set_force_sterilization(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_force_sterilization_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetForceSterilization"))) {
+    return 0;
+  }
 
   byte force_sterilization_mode = 0;
-  if ( set_force_sterilization_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     force_sterilization_mode = 4; //hex 0x04
   }
 
@@ -377,11 +417,13 @@ unsigned int set_force_sterilization(char *msg, unsigned char *cmd, char *log_ms
 }
 
 unsigned int set_force_heater(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_force_heater_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetForceHeater"))) {
+    return 0;
+  }
 
   byte force_heater_mode = 4; //hex 0x04
-  if ( set_force_heater_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     force_heater_mode = 8; //hex 0x08
   }
 
@@ -400,11 +442,13 @@ unsigned int set_force_heater(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_holiday_mode(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_holiday_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetHolidayMode"))) {
+    return 0;
+  }
 
   byte set_holiday = 16; //hex 0x10
-  if ( set_holiday_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     set_holiday = 32; //hex 0x20
   }
 
@@ -423,10 +467,12 @@ unsigned int set_holiday_mode(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_powerful_mode(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, 0, 6, &value, log_msg, PSTR("SetPowerfulMode"))) {
+    return 0;
+  }
 
-  String set_powerful_string(msg);
-
-  byte set_powerful = (set_powerful_string.toInt() + 1) & 0b111;
+  byte set_powerful = value + 1;
 
   {
     char tmp[256] = { 0 };
@@ -443,10 +489,12 @@ unsigned int set_powerful_mode(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_DHW_temp(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetDHWTemp"))) {
+    return 0;
+  }
 
-  String set_DHW_temp_string(msg);
-
-  byte set_DHW_temp = set_DHW_temp_string.toInt() + 128;
+  byte set_DHW_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -463,11 +511,13 @@ unsigned int set_DHW_temp(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_operation_mode(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_mode_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 6, &value, log_msg, PSTR("SetOperationMode"))) {
+    return 0;
+  }
 
   byte set_mode;
-  switch (set_mode_string.toInt()) {
+  switch (value) {
     case 0: set_mode = 18; break;
     case 1: set_mode = 19; break;
     case 2: set_mode = 24; break;
@@ -494,11 +544,13 @@ unsigned int set_operation_mode(char *msg, unsigned char *cmd, char *log_msg) {
 
 
 unsigned int set_bivalent_control(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetBivalentControl"))) {
+    return 0;
+  }
 
   byte set_bcontrol = 1;
-  String set_bivalent_control_string(msg);
-
-  if ( set_bivalent_control_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     set_bcontrol = 2;
   }
 
@@ -518,14 +570,16 @@ unsigned int set_bivalent_control(char *msg, unsigned char *cmd, char *log_msg) 
 
 
 unsigned int set_bivalent_mode(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, 0, 2, &value, log_msg, PSTR("SetBivalentMode"))) {
+    return 0;
+  }
 
   byte set_bmode = 4; // alternative mode
-  String set_bivalent_mode_string(msg);
-
-  if ( set_bivalent_mode_string.toInt() == 1 ) { //parallel mode
+  if ( value == 1 ) { //parallel mode
     set_bmode = 8;
   }
-  if ( set_bivalent_mode_string.toInt() == 2 ) { //advanced parallel mode
+  if ( value == 2 ) { //advanced parallel mode
     set_bmode = 12;
   }
   {
@@ -542,48 +596,82 @@ unsigned int set_bivalent_mode(char *msg, unsigned char *cmd, char *log_msg) {
   return sizeof(panasonicSendQuery);
 }
 
+// A missing or null key keeps the default 0x00 byte, which keeps the current setting for that byte.
+// Numbers are truncated toward zero like as<int>(); numeric strings are accepted as well.
+static bool set_curve_byte(JsonVariant jsonValue, unsigned char *cmd, byte index, char *log_msg, PGM_P key) {
+  if (jsonValue.isNull()) {
+    return true;
+  }
+
+  long value = 0;
+  bool valid;
+  if (jsonValue.is<double>()) {
+    double number = jsonValue.as<double>();
+    valid = (number > -128) && (number < 128);
+    if (valid) {
+      value = (long)number;
+    }
+  } else {
+    valid = parse_int_arg(jsonValue.as<const char *>(), -127, 127, &value);
+  }
+
+  if (!valid) {
+    char key_ram[32] = { 0 };
+    strncpy_P(key_ram, key, sizeof(key_ram) - 1);
+    snprintf_P(log_msg, 256, PSTR("Invalid SetCurves value for %s: expected integer -127 to 127"), key_ram);
+    return false;
+  }
+
+  cmd[index] = value + 128;
+  return true;
+}
+
 unsigned int set_curves(char *msg, unsigned char *cmd, char *log_msg) {
-  memcpy_P(cmd, panasonicSendQuery, sizeof(panasonicSendQuery));
+  if (msg == NULL) {
+    snprintf_P(log_msg, 256, PSTR("SetCurves JSON decode failed!"));
+    return 0;
+  }
 
   JsonDocument jsonDoc;
   DeserializationError error = deserializeJson(jsonDoc, msg);
-  if (!error) {
-    char tmpmsg[256] = { 0 };
-    JsonVariant jsonValue;
-    snprintf(tmpmsg, 255, "SetCurves JSON received ok");
-    memcpy(log_msg, tmpmsg, sizeof(tmpmsg));
-    //set correct bytes according to the values in json and if not exists keep default 0x00 value which keeps current setting for this byte
-    jsonValue = jsonDoc["zone1"]["heat"]["target"]["high"]; if (!jsonValue.isNull()) cmd[75] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["heat"]["target"]["low"]; if (!jsonValue.isNull()) cmd[76] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["heat"]["outside"]["low"]; if (!jsonValue.isNull()) cmd[77] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["heat"]["outside"]["high"]; if (!jsonValue.isNull()) cmd[78] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["heat"]["target"]["high"]; if (!jsonValue.isNull()) cmd[79] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["heat"]["target"]["low"]; if (!jsonValue.isNull()) cmd[80] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["heat"]["outside"]["low"]; if (!jsonValue.isNull()) cmd[81] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["heat"]["outside"]["high"]; if (!jsonValue.isNull()) cmd[82] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["cool"]["target"]["high"]; if (!jsonValue.isNull()) cmd[86] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["cool"]["target"]["low"]; if (!jsonValue.isNull()) cmd[87] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["cool"]["outside"]["low"]; if (!jsonValue.isNull()) cmd[88] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone1"]["cool"]["outside"]["high"]; if (!jsonValue.isNull()) cmd[89] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["cool"]["target"]["high"]; if (!jsonValue.isNull()) cmd[90] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["cool"]["target"]["low"]; if (!jsonValue.isNull()) cmd[91] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["cool"]["outside"]["low"]; if (!jsonValue.isNull()) cmd[92] = jsonValue.as<int>() + 128;
-    jsonValue = jsonDoc["zone2"]["cool"]["outside"]["high"]; if (!jsonValue.isNull()) cmd[93] = jsonValue.as<int>() + 128;
-  } else {
-    char tmpmsg[256] = { 0 };
-    snprintf(tmpmsg, 255, "SetCurves JSON decode failed!");
-    memcpy(log_msg, tmpmsg, sizeof(tmpmsg));
+  if (error) {
+    snprintf_P(log_msg, 256, PSTR("SetCurves JSON decode failed!"));
+    return 0;
   }
 
+  memcpy_P(cmd, panasonicSendQuery, sizeof(panasonicSendQuery));
+  bool valid = set_curve_byte(jsonDoc["zone1"]["heat"]["target"]["high"], cmd, 75, log_msg, PSTR("zone1.heat.target.high"))
+            && set_curve_byte(jsonDoc["zone1"]["heat"]["target"]["low"], cmd, 76, log_msg, PSTR("zone1.heat.target.low"))
+            && set_curve_byte(jsonDoc["zone1"]["heat"]["outside"]["low"], cmd, 77, log_msg, PSTR("zone1.heat.outside.low"))
+            && set_curve_byte(jsonDoc["zone1"]["heat"]["outside"]["high"], cmd, 78, log_msg, PSTR("zone1.heat.outside.high"))
+            && set_curve_byte(jsonDoc["zone2"]["heat"]["target"]["high"], cmd, 79, log_msg, PSTR("zone2.heat.target.high"))
+            && set_curve_byte(jsonDoc["zone2"]["heat"]["target"]["low"], cmd, 80, log_msg, PSTR("zone2.heat.target.low"))
+            && set_curve_byte(jsonDoc["zone2"]["heat"]["outside"]["low"], cmd, 81, log_msg, PSTR("zone2.heat.outside.low"))
+            && set_curve_byte(jsonDoc["zone2"]["heat"]["outside"]["high"], cmd, 82, log_msg, PSTR("zone2.heat.outside.high"))
+            && set_curve_byte(jsonDoc["zone1"]["cool"]["target"]["high"], cmd, 86, log_msg, PSTR("zone1.cool.target.high"))
+            && set_curve_byte(jsonDoc["zone1"]["cool"]["target"]["low"], cmd, 87, log_msg, PSTR("zone1.cool.target.low"))
+            && set_curve_byte(jsonDoc["zone1"]["cool"]["outside"]["low"], cmd, 88, log_msg, PSTR("zone1.cool.outside.low"))
+            && set_curve_byte(jsonDoc["zone1"]["cool"]["outside"]["high"], cmd, 89, log_msg, PSTR("zone1.cool.outside.high"))
+            && set_curve_byte(jsonDoc["zone2"]["cool"]["target"]["high"], cmd, 90, log_msg, PSTR("zone2.cool.target.high"))
+            && set_curve_byte(jsonDoc["zone2"]["cool"]["target"]["low"], cmd, 91, log_msg, PSTR("zone2.cool.target.low"))
+            && set_curve_byte(jsonDoc["zone2"]["cool"]["outside"]["low"], cmd, 92, log_msg, PSTR("zone2.cool.outside.low"))
+            && set_curve_byte(jsonDoc["zone2"]["cool"]["outside"]["high"], cmd, 93, log_msg, PSTR("zone2.cool.outside.high"));
+  if (!valid) {
+    return 0;
+  }
+
+  snprintf_P(log_msg, 256, PSTR("SetCurves JSON received ok"));
   return sizeof(panasonicSendQuery);
 }
 
 unsigned int set_zones(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_mode_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 2, &value, log_msg, PSTR("SetZones"))) {
+    return 0;
+  }
 
   byte set_mode;
-  switch (set_mode_string.toInt()) {
+  switch (value) {
     case 0: set_mode = 64; break;
     case 1: set_mode = 128; break;
     case 2: set_mode = 192; break;
@@ -605,10 +693,12 @@ unsigned int set_zones(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_floor_heat_delta(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetFloorHeatDelta"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -625,10 +715,12 @@ unsigned int set_floor_heat_delta(char *msg, unsigned char *cmd, char *log_msg) 
 }
 
 unsigned int set_floor_cool_delta(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetFloorCoolDelta"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -645,10 +737,12 @@ unsigned int set_floor_cool_delta(char *msg, unsigned char *cmd, char *log_msg) 
 }
 
 unsigned int set_dhw_heat_delta(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetDHWHeatDelta"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -665,10 +759,13 @@ unsigned int set_dhw_heat_delta(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_reset(char *msg, unsigned char *cmd, char *log_msg) {
-  byte resetRequest = 0;
-  String set_reset_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetReset"))) {
+    return 0;
+  }
 
-  if ( set_reset_string.toInt() == 1 ) {
+  byte resetRequest = 0;
+  if ( value == 1 ) {
     resetRequest = 1;
   }
 
@@ -688,10 +785,12 @@ unsigned int set_reset(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_heater_delay_time(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, 0, 254, &value, log_msg, PSTR("SetHeaterDelayTime"))) {
+    return 0;
+  }
 
-  String stringValue(msg);
-
-  byte byteValue = stringValue.toInt() + 1;
+  byte byteValue = value + 1;
 
   {
     char tmp[256] = { 0 };
@@ -707,10 +806,12 @@ unsigned int set_heater_delay_time(char *msg, unsigned char *cmd, char *log_msg)
   return sizeof(panasonicSendQuery);
 }
 unsigned int set_heater_start_delta(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetHeaterStartDelta"))) {
+    return 0;
+  }
 
-  String stringValue(msg);
-
-  byte byteValue = stringValue.toInt() + 128;
+  byte byteValue = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -726,10 +827,12 @@ unsigned int set_heater_start_delta(char *msg, unsigned char *cmd, char *log_msg
   return sizeof(panasonicSendQuery);
 }
 unsigned int set_heater_stop_delta(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetHeaterStopDelta"))) {
+    return 0;
+  }
 
-  String stringValue(msg);
-
-  byte byteValue = stringValue.toInt() + 128;
+  byte byteValue = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -745,12 +848,14 @@ unsigned int set_heater_stop_delta(char *msg, unsigned char *cmd, char *log_msg)
   return sizeof(panasonicSendQuery);
 }
 unsigned int set_main_schedule(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String stringValue(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetMainSchedule"))) {
+    return 0;
+  }
 
   byte byteValue = 64; //hex 0x40
 
-  if ( stringValue.toInt() == 1 ) {
+  if ( value == 1 ) {
     byteValue = 128; //hex 0x80
   }
 
@@ -769,11 +874,13 @@ unsigned int set_main_schedule(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_alt_external_sensor(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_alt_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetAltExternalSensor"))) {
+    return 0;
+  }
 
   byte set_alt = 16;
-  if ( set_alt_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     set_alt = 32;
   }
 
@@ -792,14 +899,16 @@ unsigned int set_alt_external_sensor(char *msg, unsigned char *cmd, char *log_ms
 }
 
 unsigned int set_external_pad_heater(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_pad_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 2, &value, log_msg, PSTR("SetExternalPadHeater"))) {
+    return 0;
+  }
 
   byte set_pad = 16;
-  if ( set_pad_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     set_pad = 32;
   }
-  if ( set_pad_string.toInt() == 2 ) {
+  if ( value == 2 ) {
     set_pad = 48;
   }
     {
@@ -817,10 +926,12 @@ unsigned int set_external_pad_heater(char *msg, unsigned char *cmd, char *log_ms
 }
 
 unsigned int set_buffer_delta(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetBufferDelta"))) {
+    return 0;
+  }
 
-  String set_temperature_string(msg);
-
-  byte request_temp = set_temperature_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -837,11 +948,13 @@ unsigned int set_buffer_delta(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_buffer(char *msg, unsigned char *cmd, char *log_msg) {
-
-  String set_buffer_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetBuffer"))) {
+    return 0;
+  }
 
   byte set_buffer = 4;
-  if ( set_buffer_string.toInt() == 1 ) {
+  if ( value == 1 ) {
     set_buffer = 8;
   }
 
@@ -860,10 +973,12 @@ unsigned int set_buffer(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_heatingoffoutdoortemp(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetHeatingOffOutdoorTemp"))) {
+    return 0;
+  }
 
-  String set_heatingoffoutdoortemp_string(msg);
-
-  byte request_temp = set_heatingoffoutdoortemp_string.toInt() + 128;
+  byte request_temp = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -881,10 +996,15 @@ unsigned int set_heatingoffoutdoortemp(char *msg, unsigned char *cmd, char *log_
 }
 
 unsigned int set_external_control(char *msg, unsigned char *cmd, char *log_msg){
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetExternalControl"))) {
+    return 0;
+  }
+
   const byte off_state=1;
   const byte address=23;
   byte value = off_state;
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = off_state * 2;
   }
     {
@@ -900,10 +1020,15 @@ unsigned int set_external_control(char *msg, unsigned char *cmd, char *log_msg){
 }
 
 unsigned int set_external_heat_cool_control(char *msg, unsigned char *cmd, char *log_msg){
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetExternalHeatCoolControl"))) {
+    return 0;
+  }
+
   const byte off_state=4;
   const byte address=23;
   byte value = off_state;
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = off_state * 2;
   }
     {
@@ -919,10 +1044,15 @@ unsigned int set_external_heat_cool_control(char *msg, unsigned char *cmd, char 
 }
 
 unsigned int set_external_error(char *msg, unsigned char *cmd, char *log_msg){
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetExternalError"))) {
+    return 0;
+  }
+
   const byte off_state=16;
   const byte address=23;
   byte value = off_state;
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = off_state * 2;
   }
     {
@@ -938,11 +1068,15 @@ unsigned int set_external_error(char *msg, unsigned char *cmd, char *log_msg){
 }
 
 unsigned int set_heatingcontrol(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetHeatingControl"))) {
+    return 0;
+  }
 
   const byte address=30;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -961,11 +1095,15 @@ unsigned int set_heatingcontrol(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_smart_dhw(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetSmartDHW"))) {
+    return 0;
+  }
 
   const byte address=24;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -984,11 +1122,15 @@ unsigned int set_smart_dhw(char *msg, unsigned char *cmd, char *log_msg) {
 }
 
 unsigned int set_quiet_mode_priority(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetQuietModePriority"))) {
+    return 0;
+  }
 
   const byte address=11;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -1007,11 +1149,15 @@ unsigned int set_quiet_mode_priority(char *msg, unsigned char *cmd, char *log_ms
 }
 
 unsigned int set_pump_flowrate_mode(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetPumpFlowrateMode"))) {
+    return 0;
+  }
 
   const byte address=29;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -1030,11 +1176,15 @@ unsigned int set_pump_flowrate_mode(char *msg, unsigned char *cmd, char *log_msg
 }
 
 unsigned int set_dhw_sensor_selection(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetDHWSensorSelection"))) {
+    return 0;
+  }
 
   const byte address = 11;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -1053,11 +1203,15 @@ unsigned int set_dhw_sensor_selection(char *msg, unsigned char *cmd, char *log_m
 }
 
 unsigned int set_dhw_heater_state(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetDHWHeaterState"))) {
+    return 0;
+  }
 
   const byte address = 9;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -1076,11 +1230,15 @@ unsigned int set_dhw_heater_state(char *msg, unsigned char *cmd, char *log_msg) 
 }
 
 unsigned int set_room_heater_state(char *msg, unsigned char *cmd, char *log_msg) {
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetRoomHeaterState"))) {
+    return 0;
+  }
 
   const byte address = 9;
   byte value = 0b01;
 
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = 0b10;
   }
 
@@ -1099,10 +1257,12 @@ unsigned int set_room_heater_state(char *msg, unsigned char *cmd, char *log_msg)
 }
 
 unsigned int set_heater_on_outdoor_temp(char *msg, unsigned char *cmd, char *log_msg) {
+  long value;
+  if (!parse_command_arg(msg, -127, 127, &value, log_msg, PSTR("SetHeaterOnOutdoorTemp"))) {
+    return 0;
+  }
 
-  String stringValue(msg);
-
-  byte byteValue = stringValue.toInt() + 128;
+  byte byteValue = value + 128;
 
   {
     char tmp[256] = { 0 };
@@ -1119,10 +1279,15 @@ unsigned int set_heater_on_outdoor_temp(char *msg, unsigned char *cmd, char *log
 }
 
 unsigned int set_external_compressor_control(char *msg, unsigned char *cmd, char *log_msg){
+  long requested;
+  if (!parse_command_arg(msg, 0, 1, &requested, log_msg, PSTR("SetExternalCompressorControl"))) {
+    return 0;
+  }
+
   const byte off_state=64;
   const byte address=23;
   byte value = off_state;
-  if ( String(msg).toInt() == 1 ) {
+  if ( requested == 1 ) {
     value = off_state * 2;
   }
     {
@@ -1139,7 +1304,7 @@ unsigned int set_external_compressor_control(char *msg, unsigned char *cmd, char
 
 //start of optional pcb commands
 unsigned int set_byte_6(int val, int base, int bit, char *log_msg, const char *func) {
-  unsigned char hex = (optionalPCBQuery[6] & ~(base << bit)) | (val << bit);
+  unsigned char hex = (optionalPCBQuery[6] & ~(base << bit)) | ((val & base) << bit);
 
   {
     char tmp[256] = { 0 };
@@ -1155,9 +1320,12 @@ unsigned int set_byte_6(int val, int base, int bit, char *log_msg, const char *f
 }
 
 unsigned int set_byte_9(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 255, &value, log_msg, PSTR("SetOptPCBByte9"))) {
+    return 0;
+  }
 
-  byte set_pcb_value = set_pcb_string.toInt();
+  byte set_pcb_value = value;
 
   {
     char tmp[256] = { 0 };
@@ -1172,56 +1340,61 @@ unsigned int set_byte_9(char *msg, char *log_msg) {
 }
 
 unsigned int set_heat_cool_mode(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
-  int set_pcb_value = (set_pcb_string.toInt() == 1);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetHeatCoolMode"))) {
+    return 0;
+  }
+
+  int set_pcb_value = (value == 1);
 
   return set_byte_6(set_pcb_value, 0b1, 7, log_msg, __FUNCTION__);
 }
 
 unsigned int set_compressor_state(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
-  int set_pcb_value = (set_pcb_string.toInt() == 1);
+  long value;
+  if (!parse_command_arg(msg, 0, 1, &value, log_msg, PSTR("SetCompressorState"))) {
+    return 0;
+  }
+
+  int set_pcb_value = (value == 1);
 
   return set_byte_6(set_pcb_value, 0b1, 6, log_msg, __FUNCTION__);
 }
 
 unsigned int set_smart_grid_mode(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
-  int set_pcb_value = set_pcb_string.toInt();
-
-  if (set_pcb_value < 4) {
-    return set_byte_6(set_pcb_value, 0b11, 4, log_msg, __FUNCTION__);
-  } else {
+  long value;
+  if (!parse_command_arg(msg, 0, 3, &value, log_msg, PSTR("SetSmartGridMode"))) {
     return 0;
   }
+
+  return set_byte_6(value, 0b11, 4, log_msg, __FUNCTION__);
 }
 
 unsigned int set_external_thermostat_1_state(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
-  int set_pcb_value = set_pcb_string.toInt();
-
-  if (set_pcb_value < 4) {
-    return set_byte_6(set_pcb_value, 0b11, 2, log_msg, __FUNCTION__);
-  } else {
+  long value;
+  if (!parse_command_arg(msg, 0, 3, &value, log_msg, PSTR("SetExternalThermostat1State"))) {
     return 0;
   }
+
+  return set_byte_6(value, 0b11, 2, log_msg, __FUNCTION__);
 }
 
 unsigned int set_external_thermostat_2_state(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
-  int set_pcb_value = set_pcb_string.toInt();
-
-  if (set_pcb_value < 4) {
-    return set_byte_6(set_pcb_value, 0b11, 0, log_msg, __FUNCTION__);
-  } else {
+  long value;
+  if (!parse_command_arg(msg, 0, 3, &value, log_msg, PSTR("SetExternalThermostat2State"))) {
     return 0;
   }
+
+  return set_byte_6(value, 0b11, 0, log_msg, __FUNCTION__);
 }
 
 unsigned int set_demand_control(char *msg, char *log_msg) {
-  String set_pcb_string(msg);
+  long value;
+  if (!parse_command_arg(msg, 0, 255, &value, log_msg, PSTR("SetDemandControl"))) {
+    return 0;
+  }
 
-  byte set_pcb_value = set_pcb_string.toInt();
+  byte set_pcb_value = value;
 
   {
     char tmp[256] = { 0 };

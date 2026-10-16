@@ -254,6 +254,8 @@ SET48 | SetReset | Reset/confirm active heatpump fault code (e.g. H72). Equivale
 SET49 | SetSterilizationTemp | Set DHW sterilization target temperature; experimental, L-series write acceptance is hardware-verified | integer 55-75 (degrees C)
 SET50 | SetSterilizationMaxTime | Set DHW sterilization holding time after reaching target temperature; experimental, L-series write acceptance is hardware-verified | 5, 10, 15, ..., 60 minutes; other values are rejected without sending a command
 
+*Command values are checked before anything is sent to the heat pump. An empty, non-numeric (for example `ON` or `unavailable`) or out-of-range value is rejected: an "Invalid value" line is logged and no command is sent. On/off topics accept only `0` or `1`; SetOperationMode, SetZones, SetBivalentMode and SetExternalPadHeater accept only their listed values. Other topics accept any whole number that fits their command byte, which can be wider than the range listed above: temperature and delta topics -127 to 127, SetQuietMode 0 to 30, SetPowerfulMode 0 to 6, SetMaxPumpDuty and SetHeaterDelayTime 0 to 254, SetDemandControl and SetOptPCBByte9 0 to 255. A decimal part is ignored, so `21.5` sets 21. The heat pump itself decides which of these values it actually uses. The optional PCB temperature topics (SetZ1RoomTemp etc.) are not affected. Note that the bundled Home Assistant example sends an empty SetOperationMode payload for the Auto(Heat)+DHW, Auto(Cool) and Auto(Cool)+DHW options; such a payload is now ignored instead of switching to Heat only.*
+
 
 *If you operate your heatpump in water mode with direct temperature setup: topics ending xxxRequestTemperature will set the absolute target temperature.*
 

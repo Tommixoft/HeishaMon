@@ -131,11 +131,12 @@ unsigned long dallasMqttRestoreStart = 0;
 
 // can't have too much in buffer due to memory shortage
 #define MAXCOMMANDSINBUFFER 10
+#define MAXCOMMANDSIZE 128
 
 // buffer for commands to send
 struct cmdbuffer_t {
   uint8_t length;
-  byte data[128];
+  byte data[MAXCOMMANDSIZE];
 } cmdbuffer[MAXCOMMANDSINBUFFER];
 
 static uint8_t cmdstart = 0;
@@ -832,6 +833,11 @@ void pushCommandBuffer(byte* command, int length) {
     log_message(_F("Too much commands already in buffer. Ignoring this commands.\n"));
     return;
   }
+  if (length > MAXCOMMANDSIZE) {
+    sprintf_P(log_msg, PSTR("Command too long (%d bytes), not sent"), length);
+    log_message(log_msg);
+    return;
+  }
   cmdbuffer[cmdend].length = length;
   memcpy(&cmdbuffer[cmdend].data, command, length);
   cmdend = (cmdend + 1) % (MAXCOMMANDSINBUFFER);
@@ -927,6 +933,11 @@ bool send_command(byte* command, int length) {
   if (length <= 0) return false;
   if ( heishamonSettings.listenonly ) {
     log_message(_F("Not sending this command. Heishamon in listen only mode!"));
+    return false;
+  }
+  if (length > MAXCOMMANDSIZE) {
+    sprintf_P(log_msg, PSTR("Command too long (%d bytes), not sent"), length);
+    log_message(log_msg);
     return false;
   }
   struct cmdbuffer_t cmd;
