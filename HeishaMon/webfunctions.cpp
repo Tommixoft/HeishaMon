@@ -4,6 +4,7 @@
 #include "htmlcode.h"
 #include "commands.h"
 #include "src/common/progmem.h"
+#include "src/common/description.h"
 #include "src/common/webserver.h"
 #include "src/common/timerqueue.h"
 
@@ -1113,17 +1114,9 @@ int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExt
         webserver_send_content_P(client, PSTR("\",\"Description\":\""), 17);
       }
 
-      int maxvalue = atoi(topicDescription[topic][0]);
       int value = actData[0] == '\0' ? 0 : getDataValue(actData, topic).toInt();
-      if (maxvalue == 0) { //this takes the special case where the description is a real value description instead of a mode, so value should take first index (= 0 + 1)
-        value = 0;
-      }
-      if ((value < 0) || (value > maxvalue)) {
-        webserver_send_content_P(client, _unknown, strlen_P(_unknown));
-      }
-      else {
-        webserver_send_content_P(client, topicDescription[topic][value + 1], strlen_P(topicDescription[topic][value + 1]));
-      }
+      const char *description = getDescription(topicDescription[topic], value, _unknown);
+      webserver_send_content_P(client, description, strlen_P(description));
 
       webserver_send_content_P(client, PSTR("\"}"), 2);
 
@@ -1162,17 +1155,9 @@ int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExt
 
       webserver_send_content_P(client, PSTR("\",\"Description\":\""), 17);
 
-      int maxvalue = atoi(xtopicDescription[topic][0]);
       int value = actDataExtra[0] == '\0' ? 0 : getDataValueExtra(actDataExtra, topic).toInt();
-      if (maxvalue == 0) { //this takes the special case where the description is a real value description instead of a mode, so value should take first index (= 0 + 1)
-        value = 0;
-      }
-      if ((value < 0) || (value > maxvalue)) {
-        webserver_send_content_P(client, _unknown, strlen_P(_unknown));
-      }
-      else {
-        webserver_send_content_P(client, xtopicDescription[topic][value + 1], strlen_P(xtopicDescription[topic][value + 1]));
-      }
+      const char *description = getDescription(xtopicDescription[topic], value, _unknown);
+      webserver_send_content_P(client, description, strlen_P(description));
 
       webserver_send_content_P(client, PSTR("\"}"), 2);
 
@@ -1210,17 +1195,9 @@ int handleJsonOutput(struct webserver_t *client, char* actData, char* actDataExt
 
       webserver_send_content_P(client, PSTR("\",\"Description\":\""), 17);
 
-      int maxvalue = atoi(opttopicDescription[topic][0]);
       int value = actOptData[0] == '\0' ? 0 : getOptDataValue(actOptData, topic).toInt();
-      if (maxvalue == 0) { //this takes the special case where the description is a real value description instead of a mode, so value should take first index (= 0 + 1)
-        value = 0;
-      }
-      if ((value < 0) || (value > maxvalue)) {
-        webserver_send_content_P(client, _unknown, strlen_P(_unknown));
-      }
-      else {
-        webserver_send_content_P(client, opttopicDescription[topic][value + 1], strlen_P(opttopicDescription[topic][value + 1]));
-      }
+      const char *description = getDescription(opttopicDescription[topic], value, _unknown);
+      webserver_send_content_P(client, description, strlen_P(description));
 
       webserver_send_content_P(client, PSTR("\"}"), 2);
 

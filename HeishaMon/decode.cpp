@@ -2,6 +2,11 @@
 #include "commands.h"
 #include "rules.h"
 #include "src/common/progmem.h"
+#include "src/common/description.h"
+
+#ifdef ESP32
+extern QueueHandle_t pcbQueue;
+#endif
 
 void websocket_write_all(char *data, uint16_t data_len);
 
@@ -327,7 +332,7 @@ void decode_heatpump_data(char* data, char* actData, PubSubClient &mqtt_client, 
           sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"TOP%u\", \"value\": \"%s\", \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(),topicDescription[Topic_Number][1]);
         }
       } else {
-        sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"TOP%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(),topicDescription[Topic_Number][dataValue.toInt() + 1]);
+        sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"TOP%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(), getDescription(topicDescription[Topic_Number], dataValue.toInt(), _unknown));
       }
       websocket_write_all(log_msg, strlen(log_msg));          
       rules_event_cb(_F("@"), topics[Topic_Number]);
@@ -369,7 +374,7 @@ void decode_heatpump_data_extra(char* data, char* actDataExtra, PubSubClient &mq
       if (maxvalue == 0) { //this takes the special case where the description is a real value description instead of a mode, so get description index 1
         sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"XTOP%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(),xtopicDescription[Topic_Number][1]);
       } else {
-        sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"XTOP%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(),xtopicDescription[Topic_Number][dataValue.toInt() + 1]);
+        sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"XTOP%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(), getDescription(xtopicDescription[Topic_Number], dataValue.toInt(), _unknown));
       }
       websocket_write_all(log_msg, strlen(log_msg));         
       rules_event_cb(_F("@"), xtopics[Topic_Number]);
@@ -408,6 +413,9 @@ void decode_optional_heatpump_data(char* data, char* actOptData, PubSubClient & 
   optionalPCBQuery[4] = valueByte4;
   byte valueByte5 = data[5];
   optionalPCBQuery[5] = valueByte5;
+#ifdef ESP32
+  xQueueOverwrite(pcbQueue, optionalPCBQuery);
+#endif
 
   memcpy(actOptData, data, OPTDATASIZE);
   for (unsigned int Topic_Number = 0 ; Topic_Number < NUMBER_OF_OPT_TOPICS ; Topic_Number++) {
@@ -418,7 +426,7 @@ void decode_optional_heatpump_data(char* data, char* actOptData, PubSubClient & 
       if (maxvalue == 0) { //this takes the special case where the description is a real value description instead of a mode, so get description index 1
         sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"OPT%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(),opttopicDescription[Topic_Number][1]);
       } else {
-        sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"OPT%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(),opttopicDescription[Topic_Number][dataValue.toInt() + 1]);
+        sprintf_P(log_msg, PSTR("{\"data\": {\"heishavalues\": {\"topic\": \"OPT%u\", \"value\": %s, \"description\": \"%s\"}}}"), Topic_Number, dataValue.c_str(), getDescription(opttopicDescription[Topic_Number], dataValue.toInt(), _unknown));
       }      
       websocket_write_all(log_msg, strlen(log_msg));
       rules_event_cb(_F("@"), optTopics[Topic_Number]);
