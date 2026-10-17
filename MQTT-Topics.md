@@ -4,7 +4,7 @@
 
 ID | Topic | Response
 --- | --- | ---
-|| LWT | Online/Offline (automatically returns to Offline if connection with the HeishaMon lost)
+|| LWT | Online/Offline, retained (automatically returns to Offline if connection with the HeishaMon lost)
 
 ## Log Topic:
 

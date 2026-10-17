@@ -406,8 +406,53 @@ static void test_table_coverage() {
   }
 }
 
+// send_heatpump_command: every call logs exactly one line; only accepted main commands are sent.
+static int dispatch_sends;
+static int dispatch_logs;
+static char dispatch_log[256];
+
+static bool count_send(byte *, int) {
+  dispatch_sends++;
+  return true;
+}
+
+static void capture_log(char *line) {
+  dispatch_logs++;
+  snprintf(dispatch_log, sizeof(dispatch_log), "%s", line);
+}
+
+static void expect_dispatch(const char *topic, const char *msg, bool optionalPCB, int sends, const char *log_prefix) {
+  char topic_buf[64];
+  char msg_buf[64];
+  snprintf(topic_buf, sizeof(topic_buf), "%s", topic);
+  snprintf(msg_buf, sizeof(msg_buf), "%s", msg);
+  dispatch_sends = 0;
+  dispatch_logs = 0;
+  dispatch_log[0] = '\0';
+  checks++;
+  send_heatpump_command(topic_buf, msg_buf, count_send, capture_log, optionalPCB);
+  char what[400];
+  if (dispatch_sends != sends) {
+    snprintf(what, sizeof(what), "dispatch sent %d command(s), expected %d", dispatch_sends, sends);
+    fail(topic, msg, what);
+  } else if (dispatch_logs != 1 || strncmp(dispatch_log, log_prefix, strlen(log_prefix)) != 0) {
+    snprintf(what, sizeof(what), "dispatch logged %d line(s), last '%s', expected one starting '%s'", dispatch_logs, dispatch_log, log_prefix);
+    fail(topic, msg, what);
+  }
+}
+
+static void test_dispatch() {
+  expect_dispatch("SetFoo", "1", true, 0, "Unknown command 'SetFoo'");
+  expect_dispatch("SetFoo", "1", false, 0, "Unknown command 'SetFoo' or optional PCB disabled");
+  expect_dispatch("SetHeatpump", "1", false, 1, "");
+  expect_dispatch("SetHeatpump", "abc", false, 0, "Invalid value");
+  expect_dispatch("SetHeatCoolMode", "1", true, 0, "");
+  expect_dispatch("SetHeatCoolMode", "1", false, 0, "Unknown command 'SetHeatCoolMode' or optional PCB disabled");
+}
+
 int main() {
   test_table_coverage();
+  test_dispatch();
   for (unsigned int s = 0; s < sizeof(MAIN_SPECS) / sizeof(MAIN_SPECS[0]); s++) {
     test_main_spec(MAIN_SPECS[s]);
   }

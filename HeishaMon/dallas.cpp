@@ -279,7 +279,7 @@ void restoreDallasFromMqtt(char* address, float temperature, void (*log_message)
     strlcpy(actDallasData[slot].address, address, sizeof(actDallasData[slot].address));
     if (strlen(address) == 16) parseDallasAddress(address, actDallasData[slot].sensor); // allows this sensor to be polled directly without waiting for a bus rescan
     strlcpy(actDallasData[slot].alias, "NOT SET", sizeof(actDallasData[slot].alias));
-    sprintf_P(log_msg, PSTR("Restored previously known 1wire sensor from mqtt: %s"), address); log_message(log_msg);
+    snprintf_P(log_msg, sizeof(log_msg), PSTR("Restored previously known 1wire sensor from mqtt: %.32s"), address); log_message(log_msg);
     loadDallasAlias();
     sprintf_P(log_msg, PSTR("{\"data\": {\"dallasRescan\": true}}")); websocket_write_all(log_msg, strlen(log_msg)); // tell open browser tabs to reload the sensor table
   }

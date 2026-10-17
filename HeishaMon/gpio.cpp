@@ -13,7 +13,7 @@ void setupGPIO(gpioSettingsStruct gpioSettings) {
 
 void mqttGPIOCallback(char* topic, char* value) {
   char log_msg[256];
-  sprintf_P(log_msg, PSTR("GPIO: MQTT message received on subtopic '%s' value '%s'"), topic, value);
+  snprintf_P(log_msg, sizeof(log_msg), PSTR("GPIO: MQTT message received on subtopic '%.32s' value '%.32s'"), topic, value);
   log_message(log_msg);
 #ifdef ESP32
   if (strcmp_P(topic, PSTR("relay/one")) == 0) {

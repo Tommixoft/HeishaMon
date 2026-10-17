@@ -496,7 +496,7 @@ void mqtt_reconnect()
       sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_send_raw_value_topic);
       mqtt_client.subscribe(topic);
       sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_willtopic);
-      mqtt_client.publish(topic, "Online");
+      mqtt_client.publish(topic, "Online", true);
       sprintf(topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_iptopic);
 #ifdef ESP8266
       mqtt_client.publish(topic, WiFi.localIP().toString().c_str(), true);
@@ -582,6 +582,11 @@ void log_message(char* string)
   {
     char log_topic[256];
     sprintf(log_topic, "%s/%s", heishamonSettings.mqtt_topic_base, mqtt_logtopic);
+
+    // PubSubClient refuses a message larger than its buffer minus header (5), topic length field (2) and topic.
+    // Truncate instead, so a failed publish below always means a broken connection.
+    size_t room = mqtt_client.getBufferSize() - 7 - strlen(log_topic);
+    if (strlen(log_line) > room) log_line[room] = '\0';
 
     if (!mqtt_client.publish(log_topic, log_line)) {
       if (heishamonSettings.logSerial1) {
@@ -943,7 +948,10 @@ bool send_command(byte* command, int length) {
   struct cmdbuffer_t cmd;
   cmd.length = length;
   memcpy(&cmd.data, command, length);
-  xQueueSend(cmdQueue, &cmd, 0);
+  if (xQueueSend(cmdQueue, &cmd, 0) != pdTRUE) {
+    log_message(_F("Command queue full, command dropped"));
+    return false;
+  }
   return true;
 }
 
@@ -974,6 +982,21 @@ bool send_command(byte* command, int length) {
 }
 #endif
 
+// Returns the text after "<prefix>/" when topic starts with it, otherwise NULL.
+// A subscription "x/#" also delivers "x" itself, which has no sub-topic.
+static char* subtopic_after(char* topic, const char* prefix) {
+  size_t len = strlen(prefix);
+  if ((strncmp(topic, prefix, len) != 0) || (topic[len] != '/')) {
+    return NULL;
+  }
+  return topic + len + 1;
+}
+
+static void log_no_subtopic(const char* topic) {
+  snprintf_P(log_msg, sizeof(log_msg), PSTR("MQTT topic '%.64s' has no sub-topic, ignored"), topic);
+  log_message(log_msg);
+}
+
 // Callback function that is called when a message has been pushed to one of your topics.
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   if (mqttcallbackinprogress) {
@@ -994,7 +1017,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       topic = topiccopy;	
     }
 	  
-	char* topic_command = topic + strlen(heishamonSettings.mqtt_topic_base) + 1; //strip base plus seperator from topic
+    char* topic_command = subtopic_after(topic, heishamonSettings.mqtt_topic_base); //strip base plus seperator from topic
+    if (topic_command == NULL) topic_command = (char*)"";
     if (strcmp(topic_command, mqtt_send_raw_value_topic) == 0)
     { // send a raw hex string
       byte *rawcommand;
@@ -1007,20 +1031,29 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       free(rawcommand);
     } else if (strncmp(topic_command, mqtt_topic_s0, strlen(mqtt_topic_s0)) == 0)  // this is a s0 topic, check for watthour topic and restore it
     {
-      char* topic_s0_watthour_port = topic_command + strlen(mqtt_topic_s0) + 15; //strip the first 17 "s0/WatthourTotal/" from the topic to get the s0 port
-      int s0Port = String(topic_s0_watthour_port).toInt();
-      float watthour = String(msg).toFloat();
-      restore_s0_Watthour(s0Port, watthour);
-      //unsubscribe after restoring the watthour values
-      char mqtt_topic[256];
-      sprintf(mqtt_topic, "%s", topic);
-      if (mqtt_client.unsubscribe(mqtt_topic)) {
-        log_message(_F("Unsubscribed from S0 watthour restore topic"));
+      char* topic_s0 = subtopic_after(topic_command, mqtt_topic_s0);
+      char* topic_s0_watthour_port = (topic_s0 == NULL) ? NULL : subtopic_after(topic_s0, "WatthourTotal"); //strip "s0/WatthourTotal/" from the topic to get the s0 port
+      if (topic_s0_watthour_port == NULL) {
+        log_no_subtopic(topic);
+      } else {
+        int s0Port = String(topic_s0_watthour_port).toInt();
+        float watthour = String(msg).toFloat();
+        restore_s0_Watthour(s0Port, watthour);
+        //unsubscribe after restoring the watthour values
+        char mqtt_topic[256];
+        sprintf(mqtt_topic, "%s", topic);
+        if (mqtt_client.unsubscribe(mqtt_topic)) {
+          log_message(_F("Unsubscribed from S0 watthour restore topic"));
+        }
       }
     } else if (strncmp(topic_command, mqtt_topic_commands, strlen(mqtt_topic_commands)) == 0)  // check for commands to heishamon
     {
-      char* topic_sendcommand = topic_command + strlen(mqtt_topic_commands) + 1; //strip the first 9 "commands/" from the topic to get what we need
-      send_heatpump_command(topic_sendcommand, msg, send_command, log_message, heishamonSettings.optionalPCB);
+      char* topic_sendcommand = subtopic_after(topic_command, mqtt_topic_commands); //strip "commands/" from the topic to get what we need
+      if (topic_sendcommand == NULL) {
+        log_no_subtopic(topic);
+      } else {
+        send_heatpump_command(topic_sendcommand, msg, send_command, log_message, heishamonSettings.optionalPCB);
+      }
     //use this to receive valid heishamon raw data from other heishamon to debug this OT code
 #ifdef RAWDEBUG
     } else if (strcmp((char*)"panasonic_heat_pump/raw/data", topic) == 0) {  // check for raw heatpump input
@@ -1030,14 +1063,22 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       memcpy(actData, msg, DATASIZE);
 #endif
     } else if (strncmp(topic_command, mqtt_topic_opentherm_read, strlen(mqtt_topic_opentherm_read)) == 0)  {
-      char* topic_otcommand = topic_command + strlen(mqtt_topic_opentherm_read) + 1; //strip the opentherm subtopic from the topic
-      mqttOTCallback(topic_otcommand, msg);
+      char* topic_otcommand = subtopic_after(topic_command, mqtt_topic_opentherm_read); //strip the opentherm subtopic from the topic
+      if (topic_otcommand == NULL) {
+        log_no_subtopic(topic);
+      } else {
+        mqttOTCallback(topic_otcommand, msg);
+      }
     } else if (strncmp(topic_command, mqtt_topic_gpio, strlen(mqtt_topic_gpio)) == 0)  {
-      char* topic_gpiocommand = topic_command + strlen(mqtt_topic_gpio) + 1; //strip the gpio subtopic from the topic
-      mqttGPIOCallback(topic_gpiocommand, msg);
+      char* topic_gpiocommand = subtopic_after(topic_command, mqtt_topic_gpio); //strip the gpio subtopic from the topic
+      if (topic_gpiocommand == NULL) {
+        log_no_subtopic(topic);
+      } else {
+        mqttGPIOCallback(topic_gpiocommand, msg);
+      }
     } else if (strncmp(topic_command, mqtt_topic_1wire, strlen(mqtt_topic_1wire)) == 0) { //this is a 1wire address topic, restore its retained value at boot
-      char* topic_1wire_address = topic_command + strlen(mqtt_topic_1wire) + 1; //strip the "1wire/" from the topic to get the sensor address
-      if ((strchr(topic_1wire_address, '/') == NULL) && (length > 0)) { //only handle the address topic itself (not .../alias) and skip empty (cleared) retained messages
+      char* topic_1wire_address = subtopic_after(topic_command, mqtt_topic_1wire); //strip the "1wire/" from the topic to get the sensor address
+      if ((topic_1wire_address != NULL) && (strchr(topic_1wire_address, '/') == NULL) && (length > 0)) { //only handle the address topic itself (not .../alias) and skip empty (cleared) retained messages
         restoreDallasFromMqtt(topic_1wire_address, String(msg).toFloat(), log_message);
       }
     }
@@ -2237,7 +2278,7 @@ void loop() {
 
     //Make sure the LWT is set to Online, even if the broker have marked it dead.
     sprintf_P(mqtt_topic, PSTR("%s/%s"), heishamonSettings.mqtt_topic_base, mqtt_willtopic);
-    mqtt_client.publish(mqtt_topic, "Online");
+    mqtt_client.publish(mqtt_topic, "Online", true);
 
 #ifdef ESP8266
     if (WiFi.isConnected()) {
