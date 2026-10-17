@@ -835,9 +835,6 @@ int settingsNewPassword(struct webserver_t *client, settingsStruct *heishamonSet
         webserver_send_content_P(client, refreshMeta, strlen_P(refreshMeta));
         webserver_send_content_P(client, webFooter, strlen_P(webFooter));
       } break;
-    case 3: {
-        setupConditionals();
-      } break;
   }
 
   return 0;
