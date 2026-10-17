@@ -742,6 +742,13 @@ int8_t http_parse_request(struct webserver_t *client, uint8_t **buf, uint16_t *l
               client->is_websocket = 1;
             }
             if(memcmp_P(args.name, PSTR("Sec-WebSocket-Key"), 17) == 0) {
+              /*
+               * websockkey and boundary share a union, so a second
+               * key or boundary header must not overwrite the first.
+               */
+              if(client->data.websockkey != NULL) {
+                return -1;
+              }
               char tmp[args.len+1];
               memset(&tmp, 0, args.len+1);
               memcpy(tmp, &client->buffer[x+1], args.len);
@@ -756,12 +763,18 @@ int8_t http_parse_request(struct webserver_t *client, uint8_t **buf, uint16_t *l
             if(memcmp_P(args.name, PSTR("Content-Type"), 12) == 0) {
               if(strncasestr(&client->buffer[x+1], "multipart/form-data", client->ptr-(x+1)) != NULL) {
                 client->reqtype = 1;
+                if(client->data.boundary != NULL) {
+                  return -1;
+                }
                 char tmp[args.len+1];
                 memset(&tmp, 0, args.len+1);
                 memcpy(tmp, &client->buffer[x+1], args.len);
                 {
                   char *ptr = strstr(tmp, "boundary=");
-                  uint8_t pos = (ptr-tmp)+strlen("boundary=");
+                  if(ptr == NULL || ptr[strlen("boundary=")] == '\0') {
+                    return -1;
+                  }
+                  size_t pos = (ptr-tmp)+strlen("boundary=");
                   memmove(&tmp[0], &tmp[pos], args.len-pos);
                   tmp[args.len-pos] = 0;
                   if((client->data.boundary = strdup(tmp)) == NULL) {
@@ -2068,28 +2081,48 @@ int websocket_read(struct webserver_t *client, unsigned char *buf, ssize_t buf_l
   uint32_t packet_length = 0;
   int index_first_mask = 0;
   int index_first_data_byte = 0;
-  int opcode = buf[0] & 0xF;
+  int opcode = 0;
+
+  /*
+   * Frames are not reassembled, so a frame whose header or payload
+   * does not fit in the received bytes is malformed: close the client
+   * instead of reading or terminating outside the buffer.
+   */
+  if(buf_len < 2) {
+    client->step = WEBSERVER_CLIENT_CLOSE;
+    return -1;
+  }
+  opcode = buf[0] & 0xF;
 
   memset(&mask, '\0', 4);
   packet_length = ((unsigned char)buf[1]) & 0x7F;
 
   index_first_mask = 2;
   if(packet_length == 126) {
+    if(buf_len < 4) {
+      client->step = WEBSERVER_CLIENT_CLOSE;
+      return -1;
+    }
     index_first_mask = 4;
     packet_length = buf[2] << 8 | buf[3];
   } else if(packet_length == 127) {
-    if(buf[2] != 0 || buf[3] != 0 || buf[4] != 0 || buf[5] != 0) {
+    if(buf_len < 10 || buf[2] != 0 || buf[3] != 0 || buf[4] != 0 || buf[5] != 0) {
       /*
        * Packet length too big
        */
+      client->step = WEBSERVER_CLIENT_CLOSE;
       return -1;
     } else {
       packet_length = buf[6] << 24 | buf[7] << 16 | buf[8] << 8 | buf[9];
     }
     index_first_mask = 10;
   }
-  memcpy(mask, &buf[index_first_mask], 4);
   index_first_data_byte = index_first_mask + 4;
+  if(buf_len < index_first_data_byte || packet_length > (uint32_t)(buf_len - index_first_data_byte)) {
+    client->step = WEBSERVER_CLIENT_CLOSE;
+    return -1;
+  }
+  memcpy(mask, &buf[index_first_mask], 4);
 
   for(i = index_first_data_byte, j = 0; i < buf_len && i < packet_length + index_first_data_byte; i++, j++) {
     buf[j] = buf[i] ^ mask[j % 4];
@@ -2134,6 +2167,14 @@ uint8_t webserver_sync_receive(struct webserver_t *client, uint8_t *rbuffer, uin
       return 0;
     }
     if(ret == 0) {
+      /*
+       * A multipart request needs its own boundary; one that also claims
+       * to be a websocket would let the handshake consume the boundary.
+       */
+      if(client->reqtype == 1 && (client->is_websocket == 1 || client->data.boundary == NULL)) {
+        client->step = WEBSERVER_CLIENT_CLOSE;
+        return 0;
+      }
       if(client->is_websocket == 1 && client->data.websockkey != NULL) {
         client->is_websocket = 1;
         client->lastping = millis();

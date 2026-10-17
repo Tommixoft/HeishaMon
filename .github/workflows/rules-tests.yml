@@ -14,6 +14,7 @@ on:
       - 'HeishaMon/src/common/**'
       - 'Tools/parsenum_test/**'
       - 'Tools/commands_test/**'
+      - 'Tools/description_test/**'
       - 'HeishaMon/commands.cpp'
       - 'HeishaMon/decode.h'
       - 'HeishaMon/commands.h'
@@ -25,6 +26,7 @@ on:
       - 'HeishaMon/src/common/**'
       - 'Tools/parsenum_test/**'
       - 'Tools/commands_test/**'
+      - 'Tools/description_test/**'
       - 'HeishaMon/commands.cpp'
       - 'HeishaMon/decode.h'
       - 'HeishaMon/commands.h'
@@ -51,4 +53,8 @@ jobs:
 
       - name: Build and run command setter tests
         run: Tools/commands_test/run.sh
+        shell: bash
+
+      - name: Build and run decoder description tests
+        run: Tools/description_test/run.sh
         shell: bash

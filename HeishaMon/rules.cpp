@@ -960,6 +960,12 @@ int rules_parse(char *file) {
     }
 
     File frules = LittleFS.open(file, "r");
+    // the rules text is copied to the end of the mempool, so it must fit there
+    if (frules.size() > MEMPOOL_SIZE - 5) {
+      logprintf_P(F("Rules file too large (%u bytes, max %u)"), (unsigned int)frules.size(), (unsigned int)(MEMPOOL_SIZE - 5));
+      frules.close();
+      return -1;
+    }
     parsing = 1;
 
     if(nrrules > 0) {
