@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 
 #include "../../HeishaMon/src/common/parsenum.h"
@@ -20,7 +21,48 @@ static void expect_reject(const char *msg, long min, long max) {
   }
 }
 
+static void expect_float(const char *msg, float expected) {
+  float value = 12345.0f;
+  if (!parse_float_arg(msg, &value) || fabsf(value - expected) > 0.0001f * fmaxf(1.0f, fabsf(expected))) {
+    printf("FAIL accept float '%s': expected %g, got %g\n", msg, expected, value);
+    failures++;
+  }
+}
+
+static void expect_float_reject(const char *msg) {
+  float value = 12345.0f;
+  if (parse_float_arg(msg, &value) || value != 12345.0f) {
+    printf("FAIL reject float '%s'\n", msg == NULL ? "NULL" : msg);
+    failures++;
+  }
+}
+
+static void test_float() {
+  expect_float("21.5", 21.5f);
+  expect_float("21,5", 21.5f);
+  expect_float("-3", -3.0f);
+  expect_float(" 7 \xC2\xB0" "C", 7.0f);
+  expect_float("+3.25", 3.25f);
+  expect_float("-0,5", -0.5f);
+  expect_float("7 ", 7.0f);
+  expect_float("1.", 1.0f);
+  expect_float("1234567890123456789012345678901", 1.2345679e30f);  // 31 characters
+
+  expect_float_reject(NULL);
+  expect_float_reject("");
+  expect_float_reject("unavailable");
+  expect_float_reject("1e3");
+  expect_float_reject("nan");
+  expect_float_reject("inf");
+  expect_float_reject(".5");
+  expect_float_reject("21.5abc");
+  expect_float_reject("21.5\xC2\xB0" "C");
+  expect_float_reject("12345678901234567890123456789012");  // 32 characters
+  expect_float_reject("1234567890123456789012345678901234567890");
+}
+
 int main() {
+  test_float();
   expect_value("21", -127, 127, 21);
   expect_value(" 21\n", -127, 127, 21);
   expect_value("\t21\r\n", -127, 127, 21);
@@ -59,9 +101,9 @@ int main() {
   expect_reject("-99999999999999999999", -127, 127);
 
   if (failures > 0) {
-    printf("%d parse_int_arg test(s) failed\n", failures);
+    printf("%d parse test(s) failed\n", failures);
     return 1;
   }
-  printf("parse_int_arg: all tests passed\n");
+  printf("parse_int_arg, parse_float_arg: all tests passed\n");
   return 0;
 }

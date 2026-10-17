@@ -1462,11 +1462,13 @@ void send_heatpump_command(char* topic, char *msg, bool (*send_command)(byte*, i
   unsigned char cmd[256] = { 0 };
   char log_msg[256] = { 0 };
   unsigned int len = 0;
+  bool found = false;
 
   for (unsigned int i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
     cmdStruct tmp;
     memcpy_P(&tmp, &commands[i], sizeof(tmp));
     if (strcmp(topic, tmp.name) == 0) {
+      found = true;
       len = tmp.func(msg, cmd, log_msg);
       log_message(log_msg);
       if (len > 0) send_command(cmd, len);
@@ -1479,13 +1481,23 @@ void send_heatpump_command(char* topic, char *msg, bool (*send_command)(byte*, i
       optCmdStruct tmp;
       memcpy_P(&tmp, &optionalCommands[i], sizeof(tmp));
       if (strcmp(topic, tmp.name) == 0) {
+        found = true;
         len = tmp.func(msg, log_msg);
         log_message(log_msg);
-#ifdef ESP32        
+#ifdef ESP32
        xQueueOverwrite(pcbQueue, optionalPCBQuery);
-#endif          
+#endif
       }
     }
+  }
+
+  if (!found) {
+    if (optionalPCB) {
+      snprintf_P(log_msg, sizeof(log_msg), PSTR("Unknown command '%.32s'"), topic);
+    } else {
+      snprintf_P(log_msg, sizeof(log_msg), PSTR("Unknown command '%.32s' or optional PCB disabled"), topic);
+    }
+    log_message(log_msg);
   }
 
 }

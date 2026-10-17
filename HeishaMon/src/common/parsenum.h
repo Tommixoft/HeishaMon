@@ -17,4 +17,13 @@
 */
 bool parse_int_arg(const char *msg, long min, long max, long *out);
 
+/*
+  Parses the same input as parse_int_arg as a decimal number, keeping the
+  fraction ("21.5" and "21,5" -> 21.5). Numbers longer than 31 characters
+  and values outside the float range are rejected.
+
+  *out is written only when true is returned.
+*/
+bool parse_float_arg(const char *msg, float *out);
+
 #endif

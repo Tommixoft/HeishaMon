@@ -115,8 +115,8 @@ void s0Loop(PubSubClient &mqtt_client, void (*log_message)(char*), char* mqtt_to
   for (int i = 0 ; i < NUM_S0_COUNTERS ; i++) {
     char tmp_log_msg[256];
 
-    //report after nextReport
-    if (millisThisLoop > actS0Data[i].nextReport) {
+    //report after nextReport, 0 means report now. Signed difference so this keeps working when millis() wraps
+    if ((actS0Data[i].nextReport == 0) || ((long)(millisThisLoop - actS0Data[i].nextReport) >= 0)) {
 
       unsigned long lastPulseInterval = millisThisLoop - actS0Data[i].lastPulse;
       unsigned long calcMaxWatt = (3600000000.0 / lastPulseInterval) / actS0Settings[i].ppkwh; //calculate the maximum watt was is possible without receiving pulses during the report interval

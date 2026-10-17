@@ -227,9 +227,6 @@ void loadSettings(settingsStruct *heishamonSettings) {
         configFile.readBytes(buf.get(), size);
         JsonDocument jsonDoc;
         DeserializationError error = deserializeJson(jsonDoc, buf.get());
-        char log_msg[1024];
-        serializeJson(jsonDoc, log_msg);
-        log_message(log_msg);
         if (!error) {
           log_message(_F("parsed json"));
           //read updated parameters, make sure no overflow
